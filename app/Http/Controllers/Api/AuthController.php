@@ -4,7 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Requests\RegisterRequest;
+use Illuminate\Http\Response;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\LoginRequest;
+use App\Traits\ApiResponse;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class AuthController extends Controller
 {
@@ -17,7 +24,7 @@ public function register(RegisterRequest $request)
     $user = User::create([
         'name' => $validated['name'],
         'email' => $validated['email'],
-        'password' => Hash::make($validated['ppaaword']),
+        'password' => Hash::make($validated['password']),
     ]);
 
     $token = $user->createToken('auth_token')->plainTextToken;
@@ -29,7 +36,7 @@ public function register(RegisterRequest $request)
 }
 public function login(LoginRequest $request)
 {
-    $validated = $request->valdated();
+    $validated = $request->validated();
 
     if (!Auth::attempt($validated)){
         return $this->apiError('Credentials not match', Response::HTTP_UNAUTHORIZED);
@@ -43,5 +50,17 @@ public function login(LoginRequest $request)
         'token_type' => 'Bearer',
         'user' => $user,
     ]);
+}
+public function logout()
+{
+    try{
+        auth()->user()->tokens()->delete();
+        return $this->apiSuccess('Tokens revoked');
+    } catch (\Throwable $e){
+        throw new HttpResponseException($this->apiError(
+            null,
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+        ));
+    }
 }
 }
